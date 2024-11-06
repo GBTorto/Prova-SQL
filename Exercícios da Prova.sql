@@ -34,13 +34,20 @@ CREATE TABLE Vendas (
 	ID_Cliente INT
 )
 
+ALTER TABLE Vendas
+ADD Preco DECIMAL (20, 2)
+
 INSERT INTO Vendas (ID_Vendas, NomeProduto, QuantidadeVendida, Marca, ID_Cliente)
 VALUES (1, 'Furadeira', 1, NULL, 4),
 	   (2, 'Pai_Rico_Pai_Pobre', 10, NULL, 1),
 	   (3, 'Bicicleta', 3, 'Shimano', 4),
 	   (4, 'Camisa_Nike', 20, 'Nike', 5) 
 
+	   UPDATE Vendas
+	   SET Preco = 850
+	   WHERE ID_Vendas = 4
 
+	   SELECT * FROM Vendas
 
 CREATE TABLE Endereco(
 	ID_Endereco INT NOT NULL PRIMARY KEY,
@@ -75,35 +82,29 @@ FOREIGN KEY (ID_Cliente) REFERENCES Cliente(ID_Cliente)
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Uma CTEs criada para ver se a view está da forma que eu quero.
 
 --CTEs
-WITH Consulta AS (
+WITH Relacionamento (PrimeiroNome, TerceiroNome, NomeProduto, Rua, Numero) AS (
 	SELECT
 	Cliente.PrimeiroNome,
 	Cliente.TerceiroNome,
 	Vendas.NomeProduto,
 	Endereco.Rua,
 	Endereco.Numero
-
 FROM Vendas
 JOIN Cliente ON Vendas.ID_Cliente = Cliente.ID_Cliente
 JOIN Endereco ON Cliente.ID_Endereco = Endereco.ID_Endereco
 )
 
-SELECT
-	Cliente.PrimeiroNome,
-	Cliente.TerceiroNome,
-	Vendas.NomeProduto,
-	Endereco.Rua,
-	Endereco.Numero
-FROM Consulta
+SELECT *
+FROM Relacionamento
 
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Uma PROCEDURE que adiciona um registro na tabela clientes, da forma mais rapida possível, pois não há como utilizar loops, devido a informações variadas
 
 --Procedure
 IF EXISTS (SELECT 1 FROM SYS.objects WHERE TYPE = 'P' AND NAME = 'Valores_Cliente')
@@ -129,7 +130,7 @@ AS
 
 GO
 
-EXEC Valores_Cliente @ID_Cliente = 6, @PrimeiroNomeCliente = 'Luiz', @SegundoNomeCliente = NULL, @TerceiroNomeCliente = NULL, @DataNascimento = '20020511', @ID_Endereco = '5'
+EXEC Valores_Cliente @ID_Cliente = 7, @PrimeiroNomeCliente = 'Carlos', @SegundoNomeCliente = NULL, @TerceiroNomeCliente = NULL, @DataNascimento = '20000511', @ID_Endereco = 7
 
 SELECT * FROM Cliente
 
@@ -137,7 +138,7 @@ SELECT * FROM Cliente
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Um LOOP que deixa cria mais registros para a tabela 'Endereco', permitindo que no futuro seja alterado apenas 2 colunas, diminuindo o tempo gastado para a criação de registros.
 
 --LOOP
 DECLARE @Contador INT = 10
@@ -160,7 +161,7 @@ SELECT * FROM Endereco
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Uma View para juntar as informações mais importantes de cada tabela.
 
 --VIEW
 CREATE VIEW CompraCliente AS
@@ -182,7 +183,7 @@ SELECT * FROM CompraCliente
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Uma TRIGGER que impede alguem de deletar qualquer item da tabela 'Vendas', mostrando uma mensagem explicando o porquê de ela não pode ser deletada.
 
 --TRIGGERS
 CREATE OR ALTER TRIGGER Deletar
@@ -204,7 +205,7 @@ SELECT * FROM Vendas
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Subquery para ver qual cliente comprou mais de 9 vezes.
 
 --SUBQUERY
 SELECT * 
@@ -220,7 +221,7 @@ SELECT * FROM Vendas
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
-
+--Function para calcular o total vendido durante o período de existencia da loja.
 
 --Function
 CREATE FUNCTION CalcularQtdVendas()
@@ -236,3 +237,18 @@ BEGIN
 END
 
 SELECT dbo.CalcularQtdVendas() AS TotalVendas
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Window Function para calcular o valor total que cada cliente gastou, mostrando seu ID, primeiro e terceiro nome
+
+--Window Function
+SELECT
+	DISTINCT Vendas.ID_Cliente,
+	Cliente.PrimeiroNome,
+	Cliente.TerceiroNome,
+	SUM(Preco) OVER (PARTITION BY Vendas.ID_Cliente) AS 'Valor Total'
+FROM Vendas
+JOIN Cliente ON Vendas.ID_Cliente = Cliente.ID_Cliente
